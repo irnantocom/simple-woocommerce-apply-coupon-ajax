@@ -1,0 +1,118 @@
+<style>
+.custom-coupon-form {
+    margin: 20px 0;
+}
+
+.coupon-input-wrapper {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.coupon-input-wrapper input[type="text"] {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.coupon-input-wrapper button {
+    padding: 10px 20px;
+    background: #0073aa;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.coupon-input-wrapper button:hover {
+    background: #005177;
+}
+
+.coupon-input-wrapper button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.coupon-message {
+    margin-top: 10px;
+}
+</style>
+
+
+<div class="custom-coupon-form">
+    <form id="apply_coupon_form" method="post">
+        <div class="coupon-input-wrapper">
+            <input type="text" 
+                   name="coupon_code" 
+                   id="coupon_code" 
+                   class="input-text" 
+                   placeholder="Enter coupon code" 
+                   value="" />
+            <button type="submit" 
+                    id="apply_coupon_btn" 
+                    class="button" 
+                    name="apply_coupon">
+                Apply Coupon
+            </button>
+        </div>
+        <div class="coupon-message"></div>
+    </form>
+</div>
+
+
+<script>
+jQuery(document).ready(function($) {
+    // Handle coupon form submission
+    $('#apply_coupon_form').on('submit', function(e) {
+        e.preventDefault();
+        
+        var form = $(this);
+        var couponCode = $('#coupon_code').val().trim();
+        var button = $('#apply_coupon_btn');
+        var messageDiv = $('.coupon-message');
+        
+        // Validasi input
+        if (couponCode === '') {
+            messageDiv.html('<div class="woocommerce-error">Please enter coupon code.</div>');
+            return false;
+        }
+        
+        // Block form during processing
+        button.prop('disabled', true).text('Processing...');
+        messageDiv.html('');
+        
+        // AJAX request
+        $.ajax({
+            type: 'POST',
+            url: wc_checkout_params.ajax_url,
+            data: {
+                action: 'apply_coupon_code',
+                coupon_code: couponCode,
+                security: wc_checkout_params.apply_coupon_nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    messageDiv.html('<div class="woocommerce-message">' + response.data.message + '</div>');
+                    
+                    // Update cart/checkout with Ajax
+                    $(document.body).trigger('update_checkout');
+                    // $(document.body).trigger('wc_update_cart');
+                    $( document.body ).trigger( 'wc_fragment_refresh' );
+                    
+                    // Reset form
+                    $('#coupon_code').val('');
+                } else {
+                    messageDiv.html('<div class="woocommerce-error">' + response.data.message + '</div>');
+                }
+            },
+            error: function() {
+                messageDiv.html('<div class="woocommerce-error">An error occurred. Please try again..</div>');
+            },
+            complete: function() {
+                button.prop('disabled', false).text('Apply Coupon');
+            }
+        });
+    });
+});
+</script>
